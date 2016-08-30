@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib, Lib.OAuth
+  exposed-modules:     Lib, Lib.OAuth, Lib.Types
   build-depends:       base >= 4.7 && < 5,
                        http-client >= 0.4.3.1,
                        http-client-tls,
@@ -26,7 +26,8 @@ library
                        entropy,
                        time,
                        transformers,
-                       cryptohash
+                       cryptohash,
+                       tubes
   default-language:    Haskell2010
 
 executable shitter-exe
@@ -37,6 +38,7 @@ executable shitter-exe
                      , shitter
                      , bytestring
                      , optparse-applicative
+                     , tubes
   default-language:    Haskell2010
 
 test-suite shitter-test

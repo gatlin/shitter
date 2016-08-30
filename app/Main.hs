@@ -2,16 +2,15 @@
 
 module Main where
 
+import Prelude hiding (map)
+import qualified Prelude as P
+
 import Lib
 import Data.ByteString (ByteString)
+import Data.ByteString.Char8 (unpack, pack)
 import Options.Applicative
 
-data Config = Config
-    { consumerKey :: String
-    , consumerSecret :: String
-    , token :: Maybe String
-    , tokenSecret :: Maybe String
-    } deriving (Show)
+import Tubes
 
 optParser :: Parser Config
 optParser = Config
@@ -24,7 +23,9 @@ optParser = Config
 
 start :: Config -> IO ()
 start c@(Config key secret token ts) = do
+    putStrLn "Config: "
     putStrLn . show $ c
+    test c
 
 main :: IO ()
 main = execParser options >>= start where

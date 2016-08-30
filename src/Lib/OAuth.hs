@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Lib.OAuth
-    (authorize, Param(..))
 where
 
 import Network.HTTP.Client
@@ -11,7 +10,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString      as BS
 import qualified Data.ByteString.Base64 as B64
-import Data.ByteString.Char8 (pack)
+import Data.ByteString.Char8 (pack, unpack)
 import Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Builder as BB
 import Control.Monad.IO.Class
@@ -23,22 +22,25 @@ import Data.Monoid ((<>))
 import Crypto.MAC.HMAC (hmac)
 import Crypto.Hash.SHA1 (hash)
 
-type Credentials = (ByteString, ByteString)
-
--- | HTTP request parameters
-data Param = Param
-    { paramKey   :: ByteString
-    , paramValue :: ByteString
-    } deriving (Show, Eq, Ord)
+import Lib.Types
 
 encode_param :: Param -> Param
 encode_param (Param k v) = Param (percent_encode k) (percent_encode v)
+
+-- | Filter all non-alphanumeric characters from a ByteString
+filterNonAlphanumeric :: ByteString -> ByteString
+filterNonAlphanumeric = BS.pack . trunc . filter f . BS.unpack
+    where f ch | ch >= 97 && ch <= 122 = True
+               | ch >= 48 && ch <= 57 = True
+               | otherwise = False
+          trunc it | length it > 32 = take 32 it
+                   | otherwise = it
 
 -- | Generates a nonce for OAuth requests.
 gen_nonce :: MonadIO m => m ByteString
 gen_nonce = do
     random_bytes <- liftIO $ getEntropy 32
-    return $ B64.encode random_bytes
+    return $ filterNonAlphanumeric $ B64.encode random_bytes
 
 -- | Returns the nearest integer number of seconds since the UNIX epoch
 timestamp :: MonadIO m => m Integer
@@ -64,7 +66,7 @@ percent_encode  = build . mconcat . map encodeChar . BS.unpack
                      | ch == 45 = True -- -
                      | otherwise = False
 
-      h2 v = let (a, b) = v `divMod` 16 in bs $ BS.pack [37, h a, h b] -- percent (%)
+      h2 v = let (a, b) = v `divMod` 16 in bs $ BS.pack [37, h a, h b]
       h i | i < 10    = 48 + i -- zero (0)
           | otherwise = 65 + i - 10 -- 65: A
 
@@ -97,22 +99,24 @@ sign key msg = B64.encode $ hmac hash 64 key msg
 create_header_string :: [Param] -> ByteString
 create_header_string params = build $ (bs "OAuth ") <> str where
     q = bs $ pack ['"']
-    encoded = map encode_param params
+    encoded = sort $ map encode_param params
     stringified = map (\(Param k v) -> (bs k) <> (bs "=") <> q <> (bs v) <> q)
                   encoded
     comma'd = intersperse (bs ", ") stringified
     str = foldl (<>) mempty comma'd
 
 -- | Generate an authorization header for a request
-authorize :: MonadIO m
-          => Credentials -- ^ Key and secret
-          -> Maybe ByteString -- ^ token
-          -> Maybe ByteString -- ^ secret
-          -> ByteString -- ^ method
-          -> ByteString -- ^ url
-          -> m ByteString
-authorize (key, secret) token token_secret method url  = do
+authHeader :: MonadIO m
+           => Credentials -- ^ Key and secret
+           -> Maybe ByteString -- ^ token
+           -> Maybe ByteString -- ^ secret
+           -> ByteString -- ^ method
+           -> ByteString -- ^ url
+           -> [Param] -- ^ Any extra parameters to pass
+           -> m ByteString
+authHeader (key, secret) token token_secret method url extras  = do
     nonce <- gen_nonce
+    liftIO . putStrLn $ "Nonce: " ++ unpack nonce
     ts    <- timestamp >>= return . pack . show
     let params = [ Param "oauth_consumer_key" key
                  , Param "oauth_nonce" nonce
@@ -122,8 +126,38 @@ authorize (key, secret) token token_secret method url  = do
                  , Param "oauth_version" "1.0"
                  ]
     let sk      = signing_key secret token_secret
-    let params' = param_string ((Param "status" "Hello, World!"): params)
+    let params' = param_string $ extras ++ params
     let base_string = sig_base_string params' method url
+    liftIO . putStrLn $ "Signature base string: " ++ unpack base_string
     let signature = sign sk base_string
+    liftIO . putStrLn $ "Signing key: " ++ unpack signature
+    let with_signature = (Param "oauth_signature" signature) : params
+    return $ create_header_string $ map encode_param with_signature
+
+
+authHeader' :: MonadIO m
+           => Credentials -- ^ Key and secret
+           -> Maybe ByteString -- ^ token
+           -> Maybe ByteString -- ^ secret
+           -> ByteString -- ^ method
+           -> ByteString -- ^ url
+           -> ByteString -- ^ nonce
+           -> ByteString -- ^ timestamp
+           -> [Param] -- ^ Any extra parameters to pass
+           -> m ByteString
+authHeader' (key, secret) token token_secret method url nonce ts extras  = do
+    let params = [ Param "oauth_consumer_key" key
+                 , Param "oauth_nonce" nonce
+                 , Param "oauth_timestamp" ts
+                 , Param "oauth_token" (maybe "" id token)
+                 , Param "oauth_signature_method" "HMAC-SHA1"
+                 , Param "oauth_version" "1.0"
+                 ]
+    let sk      = signing_key secret token_secret
+    let params' = param_string $ extras ++ params
+    let base_string = sig_base_string params' method url
+    liftIO . putStrLn $ "Signature base string: " ++ unpack base_string
+    let signature = sign sk base_string
+    liftIO . putStrLn $ "Signing key: " ++ unpack signature
     let with_signature = (Param "oauth_signature" signature) : params
     return $ create_header_string $ map encode_param with_signature
