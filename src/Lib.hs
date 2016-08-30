@@ -52,8 +52,8 @@ test (Config c s t ts) = do
     ah <- authHeader' (pack c, pack s)
           (fmap pack t) (fmap pack ts)
           (pack method) (pack url)
-          "f17d2b99297ea590bdcf30807e20f4d7"
-          "1472521321"
+          "cf70e9e51253b4526b80b85c0c3bcb81"
+          "1472570666"
           []
     let request = initialRequest {
             requestHeaders =

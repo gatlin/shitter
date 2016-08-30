@@ -159,5 +159,7 @@ authHeader' (key, secret) token token_secret method url nonce ts extras  = do
     liftIO . putStrLn $ "Signature base string: " ++ unpack base_string
     let signature = sign sk base_string
     liftIO . putStrLn $ "Signing key: " ++ unpack signature
+    liftIO . putStrLn $ "Percent encoded: " ++
+        (unpack $ percent_encode signature)
     let with_signature = (Param "oauth_signature" signature) : params
-    return $ create_header_string $ map encode_param with_signature
+    return $ create_header_string with_signature
