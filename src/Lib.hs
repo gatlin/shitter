@@ -49,11 +49,9 @@ test (Config c s t ts) = do
     let url = "https://api.twitter.com/1.1/statuses/home_timeline.json"
     initialRequest <- parseRequest $ method ++ " " ++ url
     manager <- newManager tlsManagerSettings
-    ah <- authHeader' (pack c, pack s)
+    ah <- authHeader (pack c, pack s)
           (fmap pack t) (fmap pack ts)
           (pack method) (pack url)
-          "cf70e9e51253b4526b80b85c0c3bcb81"
-          "1472570666"
           []
     let request = initialRequest {
             requestHeaders =
@@ -65,11 +63,11 @@ test (Config c s t ts) = do
                     ]
             }
     putStrLn $ "Authorization: " ++ unpack ah
-{-    withHTTP request manager $ \response -> do
+    withHTTP request manager $ \response -> do
         putStrLn $ "Status: " ++ show (statusCode $ responseStatus response)
         runTube $ sample (responseBody response)
                >< map unpack
-               >< pour display-}
+               >< pour display
 {-
 test = do
     let url = "https://api.twitter.com/1/statuses/update.json"
