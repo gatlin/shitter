@@ -25,7 +25,7 @@ start :: Config -> IO ()
 start c@(Config key secret token ts) = do
     putStrLn "Config: "
     putStrLn . show $ c
-    test c
+    withConfig c test
 
 main :: IO ()
 main = execParser options >>= start where

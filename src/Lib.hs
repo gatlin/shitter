@@ -5,6 +5,8 @@ module Lib
     , Config(..)
     , withHTTP
     , test
+    , Client
+    , withConfig
     )
 where
 
@@ -13,6 +15,7 @@ import qualified Prelude as P
 
 import Lib.OAuth
 import Lib.Types
+import Lib.Client
 
 import Tubes
 
@@ -24,6 +27,7 @@ import Network.HTTP.Types.Status (statusCode)
 import System.IO (stdout)
 import Control.Monad.IO.Class
 import Control.Monad (forever)
+import Control.Monad.Reader
 
 urlBase :: String
 urlBase = "https://api.twitter.com/1.1/"
@@ -36,14 +40,14 @@ urlEncodeParams params req = urlEncodedBody params' req where
 withHTTP
     :: Request
     -> Manager
-    -> (Response (Source IO ByteString) -> IO a)
-    -> IO a
-withHTTP r m k = withResponse r m k' where
+    -> (Response (Source Client ByteString) -> IO a)
+    -> Client a
+withHTTP r m k = liftIO $ withResponse r m k' where
     k' resp = do
-        p <- (from . brRead . responseBody) resp
+        p <- liftIO $ (from . brRead . responseBody) resp
         k (resp { responseBody = p })
 
-from :: IO ByteString -> IO (Source IO ByteString)
+from :: IO ByteString -> IO (Source Client ByteString)
 from io = return $ Source loop where
     loop = do
         bs <- liftIO io
@@ -53,12 +57,11 @@ from io = return $ Source loop where
 
 -- | Construct a GET request with the appropriate headers
 getRequest
-    :: MonadIO m
-    => String -- ^ URL
+    :: String -- ^ URL
     -> [Param] -- ^ Request parameters
-    -> Config
-    -> m Request
-getRequest url params (Config c s t ts) = do
+    -> Client Request
+getRequest url params = do
+    (Config c s t ts) <- ask
     -- convert the parameters into a query string
     let queryString = "?"++(unpack $ param_string params)
     initialRequest <- liftIO $ parseRequest $ "GET "++ url ++ queryString
@@ -74,39 +77,40 @@ getRequest url params (Config c s t ts) = do
                     ,("User-Agent","undershare")]
             }
 
-getTimeline :: Sink IO ByteString -> Config -> IO ()
-getTimeline snk c = do
+getTimeline :: Sink Client ByteString -> Client ()
+getTimeline snk = do
+    c <- ask
     req <- getRequest (urlBase ++ "statuses/home_timeline.json")
-           [] c
-    manager <- newManager tlsManagerSettings
-    withHTTP req manager $ \response ->
+           []
+    manager <- liftIO $ newManager tlsManagerSettings
+    withHTTP req manager $ \response -> withConfig c $
         runTube $ sample (responseBody response) >< pour snk
 
-testSink :: Sink IO ByteString
+testSink :: Sink Client ByteString
 testSink = Sink $ forever $ do
     piece <- await
     liftIO $ putStrLn . unpack $ piece
 
-test :: Config -> IO ()
-test c = do
+test :: Client ()
+test = do
     --postTweet "Oh, hell, I'll test one more" [] c
-    getTimeline testSink c
+    getTimeline testSink
 
 postTweet
     :: String -- ^ Tweet
     -> [Param]
-    -> Config
-    -> IO ()
-postTweet tweet params (Config c s t ts) = do
+    -> Client ()
+postTweet tweet params = do
+    (Config c s t ts) <- ask
     let url = urlBase ++ "statuses/update.json"
-    initialReq <- parseRequest $ "POST " ++ url
+    initialReq <- liftIO $ parseRequest $ "POST " ++ url
     let statusParam = Param "status" (pack tweet)
     let params' = statusParam : params
     ah <- authHeader (pack c, pack s)
           (fmap pack t) (fmap pack ts)
           "POST" (pack url)
           params'
-    putStrLn . unpack $ ah
+    liftIO $ putStrLn . unpack $ ah
     let request = urlEncodeParams params' $ initialReq {
             requestHeaders =
                     [("Authorization", ah)
@@ -114,8 +118,8 @@ postTweet tweet params (Config c s t ts) = do
                     ,("Accept", "*/*")
                     ,("User-Agent","undershare")]
             }
-    putStrLn $ "Request: " ++ show request
-    manager <- newManager tlsManagerSettings
+    liftIO $ putStrLn $ "Request: " ++ show request
+    manager <- liftIO $ newManager tlsManagerSettings
     withHTTP request manager $ \response -> do
         putStrLn $ "Status code: " ++
             show (statusCode $ responseStatus response)
