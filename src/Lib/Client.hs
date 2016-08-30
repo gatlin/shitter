@@ -13,7 +13,7 @@ import Lib.Types
 -- | A 'Client' is a monad which has access to a 'Config' value
 newtype Client a = Client {
     runClient :: ReaderT Config IO a
-} deriving (Functor
+} deriving ( Functor
            , Applicative
            , Monad
            , MonadReader Config
