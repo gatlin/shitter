@@ -23,6 +23,14 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types.Status (statusCode)
 import System.IO (stdout)
 import Control.Monad.IO.Class
+import Control.Monad (forever)
+
+urlBase :: String
+urlBase = "https://api.twitter.com/1.1/"
+
+urlEncodeParams :: [Param] -> Request -> Request
+urlEncodeParams params req = urlEncodedBody params' req where
+    params' = fmap (\(Param k v) -> (k,v)) params
 
 -- | Sends a managed HTTP request and receives a 'Source' via callback.
 withHTTP
@@ -43,56 +51,71 @@ from io = return $ Source loop where
             then halt
             else (yield bs) >> loop
 
-test :: Config -> IO ()
-test (Config c s t ts) = do
-    let method = "GET"
-    let url = "https://api.twitter.com/1.1/statuses/home_timeline.json"
-    initialRequest <- parseRequest $ method ++ " " ++ url
-    manager <- newManager tlsManagerSettings
+-- | Construct a GET request with the appropriate headers
+getRequest
+    :: MonadIO m
+    => String -- ^ URL
+    -> [Param] -- ^ Request parameters
+    -> Config
+    -> m Request
+getRequest url params (Config c s t ts) = do
+    -- convert the parameters into a query string
+    let queryString = "?"++(unpack $ param_string params)
+    initialRequest <- liftIO $ parseRequest $ "GET "++ url ++ queryString
     ah <- authHeader (pack c, pack s)
           (fmap pack t) (fmap pack ts)
-          (pack method) (pack url)
-          []
-    let request = initialRequest {
+          "GET" (pack url)
+          params
+    return $ initialRequest {
             requestHeaders =
                     [("Authorization", ah)
                     ,("Content-type", "multipart/form-data")
-                    ,("Accept","*/*")
-                    ,("Connection","close")
-                    ,("User-Agent", "undershare")
-                    ]
+                    ,("Accept", "*/*")
+                    ,("User-Agent","undershare")]
             }
-    putStrLn $ "Authorization: " ++ unpack ah
+
+getTimeline :: Sink IO ByteString -> Config -> IO ()
+getTimeline snk c = do
+    req <- getRequest (urlBase ++ "statuses/home_timeline.json")
+           [] c
+    manager <- newManager tlsManagerSettings
+    withHTTP req manager $ \response ->
+        runTube $ sample (responseBody response) >< pour snk
+
+testSink :: Sink IO ByteString
+testSink = Sink $ forever $ do
+    piece <- await
+    liftIO $ putStrLn . unpack $ piece
+
+test :: Config -> IO ()
+test c = do
+    --postTweet "Oh, hell, I'll test one more" [] c
+    getTimeline testSink c
+
+postTweet
+    :: String -- ^ Tweet
+    -> [Param]
+    -> Config
+    -> IO ()
+postTweet tweet params (Config c s t ts) = do
+    let url = urlBase ++ "statuses/update.json"
+    initialReq <- parseRequest $ "POST " ++ url
+    let statusParam = Param "status" (pack tweet)
+    let params' = statusParam : params
+    ah <- authHeader (pack c, pack s)
+          (fmap pack t) (fmap pack ts)
+          "POST" (pack url)
+          params'
+    putStrLn . unpack $ ah
+    let request = urlEncodeParams params' $ initialReq {
+            requestHeaders =
+                    [("Authorization", ah)
+                    ,("Content-Type","multipart/form-data")
+                    ,("Accept", "*/*")
+                    ,("User-Agent","undershare")]
+            }
+    putStrLn $ "Request: " ++ show request
+    manager <- newManager tlsManagerSettings
     withHTTP request manager $ \response -> do
-        putStrLn $ "Status: " ++ show (statusCode $ responseStatus response)
-        runTube $ sample (responseBody response)
-               >< map unpack
-               >< pour display
-{-
-test = do
-    let url = "https://api.twitter.com/1/statuses/update.json"
-    let method = "POST"
-    let key ="xvz1evFS4wEEPTGEFPHBog"
-    let secret = "kAcSOqF21Fu85e7zjz7ZN2U4ZRhfV3WpwPAoE3Z7kBw"
-    let token = Just "370773112-GmHxMAgYyLbNEtIKZeRNFsMKPR9EyMZeS9weJAEb"
-    let token_secret = Just "LswwdoUaIvS8ltyTt5jkRh4J50vUPVVHtR2YPi5kE"
-    let ts = "1318622958"
-    let nonce = "kYjzVBB8Y0ZFabxSWbWovY3uYSQ2pTgmZeNu2VS4cg"
-    let params = [ Param "oauth_consumer_key" key
-                 , Param "oauth_nonce" nonce
-                 , Param "oauth_timestamp" ts
-                 , Param "oauth_token" (maybe "" id token)
-                 , Param "oauth_signature_method" "HMAC-SHA1"
-                 , Param "oauth_version" "1.0"
-                 ]
-    --
-    let sk = signing_key secret token_secret
-    putStrLn $ "Signing key: " ++ unpack sk
-    let params' = param_string $
-            [Param "status" "Hello Ladies + Gentlemen, a signed OAuth request!"
-            , Param "include_entities" "true"]++params
-    let base_string = sig_base_string params' method url
-    putStrLn $ "Base string: " ++ unpack base_string
-    let signature = sign sk base_string
-    putStrLn $ "Signature: " ++ unpack signature
--}
+        putStrLn $ "Status code: " ++
+            show (statusCode $ responseStatus response)
