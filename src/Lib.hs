@@ -15,12 +15,15 @@ Twitter bots may be programmed with ease.
 -}
 
 module Lib
-    ( auth_header
+    ( Twitter(..)
     , Credentials(..)
-    , makeRequest
-    , test
-    , Twitter
+    , Param(..)
     , withCredentials
+    , tweet
+    , tweet'
+    , getHomeTimeline
+    , getHomeTimeline'
+    , test
     )
 where
 
@@ -135,17 +138,21 @@ getHomeTimeline' params = do
 getHomeTimeline :: Twitter (Source Twitter ByteString)
 getHomeTimeline = getHomeTimeline' []
 
-tweet
+tweet'
     :: String -- ^ Tweet
+    -> [Param]
     -> Twitter ()
-tweet status = do
+tweet' status params = do
     let url = urlBase ++ "statuses/update.json"
-    let params = [Param "status" (pack status)]
-    request <- postRequest url params
+    let params' = (Param "status" (pack status) : params)
+    request <- postRequest url params'
     manager <- liftIO $ newManager tlsManagerSettings
     makeRequest request manager $ \res -> do
         liftIO . putStrLn $ "Status: " ++
             show (statusCode $ responseStatus res)
+
+tweet :: String -> Twitter ()
+tweet status = tweet' status []
 
 test :: Twitter ()
 test = tweet "golly i sure do like dogs"
