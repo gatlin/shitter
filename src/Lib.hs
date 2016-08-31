@@ -132,7 +132,6 @@ getHomeTimeline'
     -> Twitter a
 getHomeTimeline' params k = do
     request <- getRequest (urlRESTBase ++ "statuses/home_timeline.json") params
-    manager <- liftIO $ newManager tlsManagerSettings
     makeRequest request $ \r -> k (responseStatus r) (responseBody r)
 
 getHomeTimeline
