@@ -25,6 +25,9 @@ module Lib
     , getHomeTimeline'
     , getUserTimeline
     , getUserTimeline'
+    , userStream
+    , userStream'
+    , publicStream
     , test
     )
 where
