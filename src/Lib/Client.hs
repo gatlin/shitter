@@ -10,7 +10,7 @@ import Control.Monad.IO.Class
 
 import Lib.Types
 
--- | A 'Client' is a monad which has access to a 'Config' value
+-- | A wrapper around 'IO' with access to a read-only 'Config' value
 newtype Client a = Client {
     runClient :: ReaderT Config IO a
 } deriving ( Functor
