@@ -27,7 +27,6 @@ import Network.HTTP.Types.Status (statusCode)
 import System.IO (stdout)
 import Control.Monad.IO.Class
 import Control.Monad (forever)
-import Control.Monad.Reader
 
 urlBase :: String
 urlBase = "https://api.twitter.com/1.1/"
@@ -61,7 +60,7 @@ getRequest
     -> [Param] -- ^ Request parameters
     -> Twitter Request
 getRequest url params = do
-    (Config c s t ts) <- ask
+    (Config c s t ts) <- getConfig
     -- convert the parameters into a query string
     let queryString = "?"++(unpack $ param_string params)
     initialRequest <- liftIO $ parseRequest $ "GET "++ url ++ queryString
@@ -79,7 +78,7 @@ getRequest url params = do
 
 getTimeline :: Sink Twitter ByteString -> Twitter ()
 getTimeline snk = do
-    c <- ask
+    c <- getConfig
     req <- getRequest (urlBase ++ "statuses/home_timeline.json")
            []
     manager <- liftIO $ newManager tlsManagerSettings
@@ -96,16 +95,15 @@ test = do
     --postTweet "Oh, hell, I'll test one more" [] c
     getTimeline testSink
 
-postTweet
+tweet
     :: String -- ^ Tweet
-    -> [Param]
     -> Twitter ()
-postTweet tweet params = do
-    (Config c s t ts) <- ask
+tweet status = do
+    (Config c s t ts) <- getConfig
     let url = urlBase ++ "statuses/update.json"
     initialReq <- liftIO $ parseRequest $ "POST " ++ url
-    let statusParam = Param "status" (pack tweet)
-    let params' = statusParam : params
+    let statusParam = Param "status" (pack status)
+    let params' = [statusParam]
     ah <- authHeader (pack c, pack s)
           (fmap pack t) (fmap pack ts)
           "POST" (pack url)

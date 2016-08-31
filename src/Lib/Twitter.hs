@@ -22,3 +22,7 @@ newtype Twitter a = Twitter {
 -- | Evaluate a 'Client' computation with a given 'Config'
 withConfig :: Config -> Twitter a -> IO a
 withConfig cfg (Twitter c) = runReaderT c cfg
+
+-- | Retrieve the read-only 'Config' value in a 'Twitter' computation
+getConfig :: Twitter Config
+getConfig = ask
