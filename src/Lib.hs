@@ -203,7 +203,5 @@ test = do
         liftIO . putStrLn $ "Status: " ++
             show (statusCode status)
         runTube $ sample src
-               >< map (break (== '\r'))
-               >< map (\(a,b) -> show (unpack a, unpack b))
-               >< map (\x -> "---\n" ++ x)
+               >< map unpack
                >< pour display
