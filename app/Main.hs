@@ -26,7 +26,7 @@ optParser = Config
 start :: Config -> IO ()
 start c@(Config k s t ts) = do
     let creds = Credentials (pack k) (pack s) (fmap pack t) (fmap pack ts)
-    withCredentials creds test
+    runTwitter creds test
 
 main :: IO ()
 main = execParser options >>= start where
