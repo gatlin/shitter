@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Lib.Client
+module Lib.Twitter
 where
 
 import Control.Monad
@@ -11,7 +11,7 @@ import Control.Monad.IO.Class
 import Lib.Types
 
 -- | A wrapper around 'IO' with access to a read-only 'Config' value
-newtype Client a = Client {
+newtype Twitter a = Twitter {
     runClient :: ReaderT Config IO a
 } deriving ( Functor
            , Applicative
@@ -20,5 +20,5 @@ newtype Client a = Client {
            , MonadIO)
 
 -- | Evaluate a 'Client' computation with a given 'Config'
-withConfig :: Config -> Client a -> IO a
-withConfig cfg (Client c) = runReaderT c cfg
+withConfig :: Config -> Twitter a -> IO a
+withConfig cfg (Twitter c) = runReaderT c cfg

@@ -5,7 +5,7 @@ module Lib
     , Config(..)
     , withHTTP
     , test
-    , Client
+    , Twitter
     , withConfig
     )
 where
@@ -15,7 +15,7 @@ import qualified Prelude as P
 
 import Lib.OAuth
 import Lib.Types
-import Lib.Client
+import Lib.Twitter
 
 import Tubes
 
@@ -40,14 +40,14 @@ urlEncodeParams params req = urlEncodedBody params' req where
 withHTTP
     :: Request
     -> Manager
-    -> (Response (Source Client ByteString) -> IO a)
-    -> Client a
+    -> (Response (Source Twitter ByteString) -> IO a)
+    -> Twitter a
 withHTTP r m k = liftIO $ withResponse r m k' where
     k' resp = do
         p <- liftIO $ (from . brRead . responseBody) resp
         k (resp { responseBody = p })
 
-from :: IO ByteString -> IO (Source Client ByteString)
+from :: IO ByteString -> IO (Source Twitter ByteString)
 from io = return $ Source loop where
     loop = do
         bs <- liftIO io
@@ -59,7 +59,7 @@ from io = return $ Source loop where
 getRequest
     :: String -- ^ URL
     -> [Param] -- ^ Request parameters
-    -> Client Request
+    -> Twitter Request
 getRequest url params = do
     (Config c s t ts) <- ask
     -- convert the parameters into a query string
@@ -77,7 +77,7 @@ getRequest url params = do
                     ,("User-Agent","undershare")]
             }
 
-getTimeline :: Sink Client ByteString -> Client ()
+getTimeline :: Sink Twitter ByteString -> Twitter ()
 getTimeline snk = do
     c <- ask
     req <- getRequest (urlBase ++ "statuses/home_timeline.json")
@@ -86,12 +86,12 @@ getTimeline snk = do
     withHTTP req manager $ \response -> withConfig c $
         runTube $ sample (responseBody response) >< pour snk
 
-testSink :: Sink Client ByteString
+testSink :: Sink Twitter ByteString
 testSink = Sink $ forever $ do
     piece <- await
     liftIO $ putStrLn . unpack $ piece
 
-test :: Client ()
+test :: Twitter ()
 test = do
     --postTweet "Oh, hell, I'll test one more" [] c
     getTimeline testSink
@@ -99,7 +99,7 @@ test = do
 postTweet
     :: String -- ^ Tweet
     -> [Param]
-    -> Client ()
+    -> Twitter ()
 postTweet tweet params = do
     (Config c s t ts) <- ask
     let url = urlBase ++ "statuses/update.json"
