@@ -1,7 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Lib.Types where
+module Lib.Types (
+    Credentials(..),
+    Param(..),
+    Twitter(..),
+    withCredentials,
+    getCredentials
+    )
+where
 
 import Data.ByteString (ByteString)
 import Control.Monad
@@ -25,7 +32,7 @@ data Param = Param
 
 -- | A wrapper around 'IO' with access to read-only 'Credentials'
 newtype Twitter a = Twitter {
-    runClient :: ReaderT Credentials IO a
+    runTwitter :: ReaderT Credentials IO a
 } deriving ( Functor
            , Applicative
            , Monad
