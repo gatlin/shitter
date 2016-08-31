@@ -131,28 +131,3 @@ authHeader (key, secret) token token_secret method url extras  = do
     let signature = sign sk base_string
     let with_signature = (Param "oauth_signature" signature) : params
     return $ create_header_string with_signature
-
-authHeader' :: MonadIO m
-           => Credentials -- ^ Key and secret
-           -> Maybe ByteString -- ^ token
-           -> Maybe ByteString -- ^ secret
-           -> ByteString -- ^ method
-           -> ByteString -- ^ url
-           -> ByteString -- ^ fake nonce
-           -> ByteString -- ^ fake timestamp
-           -> [Param] -- ^ Any extra parameters to pass
-           -> m ByteString
-authHeader' (key, secret) token token_secret method url nonce ts extras  = do
-    let params = [ Param "oauth_consumer_key" key
-                 , Param "oauth_nonce" nonce
-                 , Param "oauth_timestamp" ts
-                 , Param "oauth_token" (maybe "" id token)
-                 , Param "oauth_signature_method" "HMAC-SHA1"
-                 , Param "oauth_version" "1.0"
-                 ]
-    let sk      = signing_key secret token_secret
-    let params' = param_string $ extras ++ params
-    let base_string = sig_base_string params' method url
-    let signature = sign sk base_string
-    let with_signature = (Param "oauth_signature" signature) : params
-    return $ create_header_string with_signature
