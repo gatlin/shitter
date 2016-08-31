@@ -28,6 +28,10 @@ module Lib
     , userStream
     , userStream'
     , publicStream
+    -- * Re-exports
+    , lift
+    , liftIO
+    , Network.HTTP.Types.Status
     , test
     )
 where
@@ -67,8 +71,7 @@ makeRequest
     -> (ResponseStream -> Twitter a)
     -> Twitter a
 makeRequest r k = do
-    m <- getManager
-    response <- responseOpen r m
+    response <- responseOpen r
     result <- k response
     responseClose response
     return result
@@ -83,9 +86,9 @@ from io = Source loop where
 
 responseOpen
     :: Request
-    -> Manager
     -> Twitter ResponseStream
-responseOpen req man = do
+responseOpen req = do
+    man <- getManager
     res <- liftIO $ H.responseOpen req man
     return $ fmap (from . brRead) res
 
@@ -181,17 +184,18 @@ publicStream terms k = do
 tweet'
     :: String -- ^ Tweet
     -> [Param]
-    -> Twitter ()
-tweet' status params = do
+    -> Twitter Status
+tweet' txt params = do
     let url = urlRESTBase ++ "statuses/update.json"
-    let params' = (Param "status" (pack status) : params)
+    let params' = (Param "status" (pack txt) : params)
     request <- postRequest url params'
     makeRequest request $ \res -> do
         liftIO . putStrLn $ "Status: " ++
             show (statusCode $ responseStatus res)
+        return $ responseStatus res
 
-tweet :: String -> Twitter ()
-tweet status = tweet' status []
+tweet :: String -> Twitter Status
+tweet txt = tweet' txt []
 
 test :: Twitter ()
 test = do
