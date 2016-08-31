@@ -1,9 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : Lib.hs
+Description : Twitter API utilities
+Copyright   : 2016
+License     : GPLv3
+
+Maintainer  : Gatlin Johnson <gatlin@niltag.net>
+Stability   : experimental
+Portability : non-portable
+
+This module implements functions and commands for the 'Twitter' monad so that
+Twitter bots may be programmed with ease.
+-}
+
 module Lib
-    ( authHeader
+    ( auth_header
     , Credentials(..)
-    , withHTTP
+    , makeRequest
     , test
     , Twitter
     , withCredentials
@@ -20,12 +34,14 @@ import Tubes
 
 import Data.ByteString (ByteString, null, hPut, append)
 import Data.ByteString.Char8 (unpack, pack)
-import Network.HTTP.Client
+import Network.HTTP.Client hiding (responseOpen, responseClose)
+import qualified Network.HTTP.Client as H
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types.Status (statusCode)
 import System.IO (stdout)
 import Control.Monad.IO.Class
 import Control.Monad (forever)
+import Control.Monad.Trans (lift)
 
 urlBase :: String
 urlBase = "https://api.twitter.com/1.1/"
@@ -34,24 +50,45 @@ urlEncodeParams :: [Param] -> Request -> Request
 urlEncodeParams params req = urlEncodedBody params' req where
     params' = fmap (\(Param k v) -> (k,v)) params
 
+closeOpenResponse :: Twitter ()
+closeOpenResponse = getOpenResponse >>= maybe (return ()) (\r -> do
+    responseClose r
+    setOpenResponse Nothing)
+
 -- | Sends a managed HTTP request and receives a 'Source' via callback.
-withHTTP
+makeRequest
     :: Request
     -> Manager
-    -> (Response (Source Twitter ByteString) -> IO a)
+    -> (ResponseStream -> Twitter a)
     -> Twitter a
-withHTTP r m k = liftIO $ withResponse r m k' where
-    k' resp = do
-        p <- liftIO $ (from . brRead . responseBody) resp
-        k (resp { responseBody = p })
+makeRequest r m k = do
+    response <- responseOpen r m
+    result <- k response
+    responseClose response
+    return result
 
-from :: IO ByteString -> IO (Source Twitter ByteString)
-from io = return $ Source loop where
+from :: IO ByteString -> Source Twitter ByteString
+from io = Source loop where
     loop = do
         bs <- liftIO io
         if null bs
             then halt
             else (yield bs) >> loop
+
+responseOpen
+    :: Request
+    -> Manager
+    -> Twitter ResponseStream
+responseOpen req man = do
+    res <- liftIO $ H.responseOpen req man
+    let res' = fmap (from . brRead) res
+    setOpenResponse (Just res')
+    return res'
+
+responseClose
+    :: Response a
+    -> Twitter ()
+responseClose = liftIO . H.responseClose
 
 -- | Construct a GET request with the appropriate headers
 getRequest
@@ -59,11 +96,10 @@ getRequest
     -> [Param] -- ^ Request parameters
     -> Twitter Request
 getRequest url params = do
-    cred@(Credentials c s t ts) <- getCredentials
     -- convert the parameters into a query string
     let queryString = "?"++(unpack $ param_string params)
     initialRequest <- liftIO $ parseRequest $ "GET "++ url ++ queryString
-    ah <- authHeader cred "GET" (pack url) params
+    ah <- auth_header "GET" (pack url) params
     return $ initialRequest {
             requestHeaders =
                     [("Authorization", ah)
@@ -72,45 +108,44 @@ getRequest url params = do
                     ,("User-Agent","undershare")]
             }
 
-getTimeline :: Sink Twitter ByteString -> Twitter ()
-getTimeline snk = do
+postRequest
+    :: String -- ^ URL
+    -> [Param] -- ^ Request parameters
+    -> Twitter Request
+postRequest url params = do
+    initialRequest <- liftIO $ parseRequest $ "POST " ++ url
+    ah <- auth_header "POST" (pack url) params
+    return $ urlEncodeParams params $ initialRequest {
+        requestHeaders =
+                [("Authorization", ah)
+                ,("Content-Type", "multipart/form-data")
+                ,("Accept", "*/*")
+                ,("User-Agent", "undershare")]
+        }
+
+-- | Produces a 'Source' of tweets in 'ByteString' form
+getHomeTimeline' :: [Param] -> Twitter (Source Twitter ByteString)
+getHomeTimeline' params = do
     c <- getCredentials
-    req <- getRequest (urlBase ++ "statuses/home_timeline.json")
-           []
+    request <- getRequest (urlBase ++ "statuses/home_timeline.json") params
     manager <- liftIO $ newManager tlsManagerSettings
-    withHTTP req manager $ \response -> withCredentials c $
-        runTube $ sample (responseBody response) >< pour snk
+    res <- (responseOpen request manager)
+    return $ responseBody res
 
-testSink :: Sink Twitter ByteString
-testSink = Sink $ forever $ do
-    piece <- await
-    liftIO $ putStrLn . unpack $ piece
-
-test :: Twitter ()
-test = do
-    --postTweet "Oh, hell, I'll test one more" [] c
-    getTimeline testSink
+getHomeTimeline :: Twitter (Source Twitter ByteString)
+getHomeTimeline = getHomeTimeline' []
 
 tweet
     :: String -- ^ Tweet
     -> Twitter ()
 tweet status = do
-    cred@(Credentials c s t ts) <- getCredentials
     let url = urlBase ++ "statuses/update.json"
-    initialReq <- liftIO $ parseRequest $ "POST " ++ url
-    let statusParam = Param "status" (pack status)
-    let params' = [statusParam]
-    ah <- authHeader cred "POST" (pack url) params'
-    liftIO $ putStrLn . unpack $ ah
-    let request = urlEncodeParams params' $ initialReq {
-            requestHeaders =
-                    [("Authorization", ah)
-                    ,("Content-Type","multipart/form-data")
-                    ,("Accept", "*/*")
-                    ,("User-Agent","undershare")]
-            }
-    liftIO $ putStrLn $ "Request: " ++ show request
+    let params = [Param "status" (pack status)]
+    request <- postRequest url params
     manager <- liftIO $ newManager tlsManagerSettings
-    withHTTP request manager $ \response -> do
-        putStrLn $ "Status code: " ++
-            show (statusCode $ responseStatus response)
+    makeRequest request manager $ \res -> do
+        liftIO . putStrLn $ "Status: " ++
+            show (statusCode $ responseStatus res)
+
+test :: Twitter ()
+test = tweet "golly i sure do like dogs"

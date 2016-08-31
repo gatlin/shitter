@@ -1,11 +1,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : Lib/OAuth.hs
+Description : Twitter OAuth implementation
+Copyright   : 2016
+License     : GPLv3
+
+Maintainer  : Gatlin Johnson <gatlin@niltag.net>
+Stability   : experimental
+Portability : non-portable
+
+Chiefly this module defines what is necessary to compute the Authorization
+header required by calls to the Twitter API.
+-}
+
 module Lib.OAuth
+    (
+      auth_header
+    , param_string
+    , PercentEncode(..)
+    )
 where
 
 import Network.HTTP.Client
 import Network.HTTP.Types.Status (statusCode)
-import Data.Aeson (object, (.=), encode)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString      as BS
@@ -23,9 +41,6 @@ import Crypto.MAC.HMAC (hmac)
 import Crypto.Hash.SHA1 (hash)
 
 import Lib.Types
-
-encode_param :: Param -> Param
-encode_param (Param k v) = Param (percent_encode k) (percent_encode v)
 
 -- | Filter all non-alphanumeric characters from a ByteString
 filterNonAlphanumeric :: ByteString -> ByteString
@@ -49,33 +64,41 @@ timestamp = liftIO $ round <$> getPOSIXTime
 bs = BB.byteString
 build = BL.toStrict . BB.toLazyByteString
 
--- | Percent encoded bytestring. Lovingly modified from the package
---   'uri-bytestring'
-percent_encode :: ByteString -> ByteString
-percent_encode  = build . mconcat . map encodeChar . BS.unpack
-    where
-      encodeChar ch | unreserved' ch = BB.word8 ch
-                    | otherwise     = h2 ch
+-- | Class of types which may be percent encoded.
+class PercentEncode t where
+    percent_encode :: t -> t
 
-      unreserved' ch | ch >= 65 && ch <= 90  = True -- A-Z
-                     | ch >= 97 && ch <= 122 = True -- a-z
-                     | ch >= 48 && ch <= 57  = True -- 0-9
-                     | ch == 95 = True -- _
-                     | ch == 46 = True -- .
-                     | ch == 126 = True -- ~
-                     | ch == 45 = True -- -
-                     | otherwise = False
+instance PercentEncode ByteString where
 
-      h2 v = let (a, b) = v `divMod` 16 in bs $ BS.pack [37, h a, h b]
-      h i | i < 10    = 48 + i -- zero (0)
-          | otherwise = 65 + i - 10 -- 65: A
+    -- | Percent encoded bytestring. Lovingly modified from the package
+    --   'uri-bytestring'
+    percent_encode  = build . mconcat . map encodeChar . BS.unpack
+        where
+            encodeChar ch | unreserved' ch = BB.word8 ch
+                          | otherwise     = h2 ch
+
+            unreserved' ch | ch >= 65 && ch <= 90  = True -- A-Z
+                           | ch >= 97 && ch <= 122 = True -- a-z
+                           | ch >= 48 && ch <= 57  = True -- 0-9
+                           | ch == 95 = True -- _
+                           | ch == 46 = True -- .
+                           | ch == 126 = True -- ~
+                           | ch == 45 = True -- -
+                           | otherwise = False
+
+            h2 v = let (a, b) = v `divMod` 16 in bs $ BS.pack [37, h a, h b]
+            h i | i < 10    = 48 + i -- zero (0)
+                | otherwise = 65 + i - 10 -- 65: A
+
+instance PercentEncode Param where
+    percent_encode (Param a b) = Param (percent_encode a) (percent_encode b)
 
 -- | Generate a parameter string from a list of 'Param'
 param_string :: [Param] -> ByteString
 param_string = build .
     foldl (<>) mempty . intersperse (bs "&") .
     map (\(Param k v) -> (bs k) <> (bs "=") <> (bs v)) .
-    sort . map encode_param
+    sort . map percent_encode
 
 -- | Create the base string which will be signed
 sig_base_string :: ByteString -> ByteString -> ByteString -> ByteString
@@ -99,23 +122,22 @@ sign key msg = B64.encode $ hmac hash 64 key msg
 create_header_string :: [Param] -> ByteString
 create_header_string params = build $ (bs "OAuth ") <> str where
     q = bs $ pack ['"']
-    encoded = sort $ map encode_param params
+    encoded = sort $ map percent_encode params
     stringified = map (\(Param k v) -> (bs k) <> (bs "=") <> q <> (bs v) <> q)
                   encoded
     comma'd = intersperse (bs ", ") stringified
     str = foldl (<>) mempty comma'd
 
 -- | Generate an authorization header for a request
-authHeader :: MonadIO m
-           => Credentials -- ^ Keys and secrets
-           -> ByteString -- ^ method
-           -> ByteString -- ^ url
-           -> [Param] -- ^ Any extra parameters to pass
-           -> m ByteString
-authHeader (Credentials key secret token token_secret) method url extras  = do
+auth_header
+    :: ByteString -- ^ method
+    -> ByteString -- ^ url
+    -> [Param] -- ^ Any extra parameters to pass
+    -> Twitter ByteString
+auth_header method url extras  = do
     nonce <- gen_nonce
-    liftIO . putStrLn $ "Nonce: " ++ unpack nonce
     ts    <- timestamp >>= return . pack . show
+    (Credentials key secret token token_secret) <- getCredentials
     let params = [ Param "oauth_consumer_key" key
                  , Param "oauth_nonce" nonce
                  , Param "oauth_timestamp" ts
