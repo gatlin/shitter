@@ -127,10 +127,10 @@ postRequest url params = do
 
 -- | Produces a 'Source' of tweets in 'ByteString' form
 getHomeTimeline'
-    :: (Status -> Source Twitter ByteString -> Twitter a)
-    -> [Param]
+    :: [Param]
+    -> (Status -> Source Twitter ByteString -> Twitter a)
     -> Twitter a
-getHomeTimeline' k params = do
+getHomeTimeline' params k = do
     request <- getRequest (urlRESTBase ++ "statuses/home_timeline.json") params
     manager <- liftIO $ newManager tlsManagerSettings
     makeRequest request $ \r -> k (responseStatus r) (responseBody r)
@@ -138,33 +138,33 @@ getHomeTimeline' k params = do
 getHomeTimeline
     :: (Status -> Source Twitter ByteString -> Twitter a)
     -> Twitter a
-getHomeTimeline k = getHomeTimeline' k []
+getHomeTimeline k = getHomeTimeline' [] k
 
 getUserTimeline'
-    :: (Status -> Source Twitter ByteString -> Twitter a)
-    -> [Param]
+    :: [Param]
+    -> (Status -> Source Twitter ByteString -> Twitter a)
     -> Twitter a
-getUserTimeline' k params = do
+getUserTimeline' params k = do
     request <- getRequest (urlRESTBase ++ "statuses/user_timeline.json") params
     makeRequest request $ \r -> k (responseStatus r) (responseBody r)
 
 getUserTimeline
     :: (Status -> Source Twitter ByteString -> Twitter a)
     -> Twitter a
-getUserTimeline k = getUserTimeline' k []
+getUserTimeline k = getUserTimeline' [] k
 
 userStream'
-    :: (Status -> Source Twitter ByteString -> Twitter a)
-    -> [Param]
+    :: [Param]
+    -> (Status -> Source Twitter ByteString -> Twitter a)
     -> Twitter a
-userStream' k params  = do
+userStream' params k = do
     request <- getRequest "https://userstream.twitter.com/1.1/user.json" params
     makeRequest request $ \r -> k (responseStatus r) (responseBody r)
 
 userStream
     :: (Status -> Source Twitter ByteString -> Twitter a)
     -> Twitter a
-userStream k = userStream' k []
+userStream k = userStream' [] k
 
 publicStream
     :: [String] -- ^ Search terms
