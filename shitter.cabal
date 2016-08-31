@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib, Lib.OAuth, Lib.Types, Lib.Twitter
+  exposed-modules:     Lib, Lib.OAuth, Lib.Types
   build-depends:       base >= 4.7 && < 5,
                        http-client >= 0.4.3.1,
                        http-client-tls,

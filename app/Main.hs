@@ -12,6 +12,8 @@ import Options.Applicative
 
 import Tubes
 
+data Config = Config String String (Maybe String) (Maybe String)
+
 optParser :: Parser Config
 optParser = Config
     <$> strOption (long "key" <> help "Your API consumer key")
@@ -22,10 +24,9 @@ optParser = Config
             strOption (long "token-secret" <> help "Client access secret"))
 
 start :: Config -> IO ()
-start c@(Config key secret token ts) = do
-    putStrLn "Config: "
-    putStrLn . show $ c
-    withConfig c test
+start c@(Config k s t ts) = do
+    let creds = Credentials (pack k) (pack s) (fmap pack t) (fmap pack ts)
+    withCredentials creds test
 
 main :: IO ()
 main = execParser options >>= start where

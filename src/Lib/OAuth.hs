@@ -107,14 +107,12 @@ create_header_string params = build $ (bs "OAuth ") <> str where
 
 -- | Generate an authorization header for a request
 authHeader :: MonadIO m
-           => Credentials -- ^ Key and secret
-           -> Maybe ByteString -- ^ token
-           -> Maybe ByteString -- ^ secret
+           => Credentials -- ^ Keys and secrets
            -> ByteString -- ^ method
            -> ByteString -- ^ url
            -> [Param] -- ^ Any extra parameters to pass
            -> m ByteString
-authHeader (key, secret) token token_secret method url extras  = do
+authHeader (Credentials key secret token token_secret) method url extras  = do
     nonce <- gen_nonce
     liftIO . putStrLn $ "Nonce: " ++ unpack nonce
     ts    <- timestamp >>= return . pack . show

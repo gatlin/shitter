@@ -2,11 +2,11 @@
 
 module Lib
     ( authHeader
-    , Config(..)
+    , Credentials(..)
     , withHTTP
     , test
     , Twitter
-    , withConfig
+    , withCredentials
     )
 where
 
@@ -15,7 +15,6 @@ import qualified Prelude as P
 
 import Lib.OAuth
 import Lib.Types
-import Lib.Twitter
 
 import Tubes
 
@@ -60,14 +59,11 @@ getRequest
     -> [Param] -- ^ Request parameters
     -> Twitter Request
 getRequest url params = do
-    (Config c s t ts) <- getConfig
+    cred@(Credentials c s t ts) <- getCredentials
     -- convert the parameters into a query string
     let queryString = "?"++(unpack $ param_string params)
     initialRequest <- liftIO $ parseRequest $ "GET "++ url ++ queryString
-    ah <- authHeader (pack c, pack s)
-          (fmap pack t) (fmap pack ts)
-          "GET" (pack url)
-          params
+    ah <- authHeader cred "GET" (pack url) params
     return $ initialRequest {
             requestHeaders =
                     [("Authorization", ah)
@@ -78,11 +74,11 @@ getRequest url params = do
 
 getTimeline :: Sink Twitter ByteString -> Twitter ()
 getTimeline snk = do
-    c <- getConfig
+    c <- getCredentials
     req <- getRequest (urlBase ++ "statuses/home_timeline.json")
            []
     manager <- liftIO $ newManager tlsManagerSettings
-    withHTTP req manager $ \response -> withConfig c $
+    withHTTP req manager $ \response -> withCredentials c $
         runTube $ sample (responseBody response) >< pour snk
 
 testSink :: Sink Twitter ByteString
@@ -99,15 +95,12 @@ tweet
     :: String -- ^ Tweet
     -> Twitter ()
 tweet status = do
-    (Config c s t ts) <- getConfig
+    cred@(Credentials c s t ts) <- getCredentials
     let url = urlBase ++ "statuses/update.json"
     initialReq <- liftIO $ parseRequest $ "POST " ++ url
     let statusParam = Param "status" (pack status)
     let params' = [statusParam]
-    ah <- authHeader (pack c, pack s)
-          (fmap pack t) (fmap pack ts)
-          "POST" (pack url)
-          params'
+    ah <- authHeader cred "POST" (pack url) params'
     liftIO $ putStrLn . unpack $ ah
     let request = urlEncodeParams params' $ initialReq {
             requestHeaders =
