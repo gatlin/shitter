@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {- |
-Module      : Lib.hs
+Module      : Net.Monad.Twitter
 Description : Twitter API utilities
 Copyright   : 2016
 License     : GPLv3
@@ -14,10 +14,9 @@ This module implements functions and commands for the 'Twitter' monad so that
 Twitter bots may be programmed with ease.
 -}
 
-module Lib
-    ( Twitter(..)
-    , Credentials(..)
-    , Param(..)
+module Net.Monad.Twitter
+    ( -- * Twitter monad
+      Twitter(..)
     , runTwitter
     , tweet
     , tweet'
@@ -28,19 +27,22 @@ module Lib
     , userStream
     , userStream'
     , publicStream
+      -- * Miscellaneous
+    , Credentials(..)
+    , Param(..)
     -- * Re-exports
     , lift
     , liftIO
     , Network.HTTP.Types.Status
-    , test
+    , statusCode
     )
 where
 
 import Prelude hiding (map, null, filter, break)
 import qualified Prelude as P
 
-import Lib.OAuth
-import Lib.Types
+import Net.Monad.Twitter.OAuth
+import Net.Monad.Twitter.Types
 
 import Tubes
 
@@ -196,12 +198,3 @@ tweet' txt params = do
 
 tweet :: String -> Twitter Status
 tweet txt = tweet' txt []
-
-test :: Twitter ()
-test = do
-    publicStream ["dog"] $ \status src -> do
-        liftIO . putStrLn $ "Status: " ++
-            show (statusCode status)
-        runTube $ sample src
-               >< map unpack
-               >< pour display

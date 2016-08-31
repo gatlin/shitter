@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 {- |
-Module      : Lib/Types.hs
+Module      : Net.Monad.Twitter.Types
 Description : Common type definitions used elsewhere
 Copyright   : 2016
 License     : GPLv3
@@ -13,7 +13,7 @@ Portability : non-portable
 
 -}
 
-module Lib.Types
+module Net.Monad.Twitter.Types
     (
       Credentials(..)
     , Param(..)

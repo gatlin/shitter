@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {- |
-Module      : Lib/OAuth.hs
+Module      : Net.Monad.Twitter.OAuth
 Description : Twitter OAuth implementation
 Copyright   : 2016
 License     : GPLv3
@@ -14,7 +14,7 @@ Chiefly this module defines what is necessary to compute the Authorization
 header required by calls to the Twitter API.
 -}
 
-module Lib.OAuth
+module Net.Monad.Twitter.OAuth
     (
       auth_header
     , param_string
@@ -40,7 +40,7 @@ import Data.Monoid ((<>))
 import Crypto.MAC.HMAC (hmac)
 import Crypto.Hash.SHA1 (hash)
 
-import Lib.Types
+import Net.Monad.Twitter.Types
 
 -- | Filter all non-alphanumeric characters from a ByteString
 filterNonAlphanumeric :: ByteString -> ByteString

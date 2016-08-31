@@ -2,12 +2,12 @@ name:                shitter
 version:             0.1.0.0
 synopsis:            Initial project template from stack
 description:         Please see README.md
-homepage:            https://github.com/githubuser/shitter#readme
+homepage:            https://github.com/gatlin/shitter#readme
 license:             BSD3
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2016 Author name here
+author:              Gatlin Johnson
+maintainer:          gatlin@niltag.net
+copyright:           2016 Gatlin Johnson
 category:            Web
 build-type:          Simple
 -- extra-source-files:
@@ -15,7 +15,8 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib, Lib.OAuth, Lib.Types
+  exposed-modules:     Net.Monad.Twitter, Net.Monad.Twitter.Types,
+                       Net.Monad.Twitter.OAuth
   build-depends:       base >= 4.7 && < 5,
                        http-client >= 0.4.3.1,
                        http-client-tls,
@@ -31,23 +32,14 @@ library
                        mtl
   default-language:    Haskell2010
 
-executable shitter-exe
-  hs-source-dirs:      app
-  main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       base
-                     , shitter
-                     , bytestring
-                     , optparse-applicative
-                     , tubes
-  default-language:    Haskell2010
-
 test-suite shitter-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base
                      , shitter
+                     , tubes
+                     , bytestring
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
