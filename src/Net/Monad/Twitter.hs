@@ -133,7 +133,7 @@ postRequest url params = do
                 ,("User-Agent", "undershare")]
         }
 
--- | Produces a 'Source' of tweets in 'ByteString' form
+-- | Get the home timeline using the REST API with request parameters
 getHomeTimeline'
     :: [Param]
     -> (Status -> Source Twitter ByteString -> Twitter a)
@@ -142,11 +142,13 @@ getHomeTimeline' params k = do
     request <- getRequest (urlRESTBase ++ "statuses/home_timeline.json") params
     makeRequest request $ \r -> k (responseStatus r) (responseBody r)
 
+-- | Get the home timeline using the REST API
 getHomeTimeline
     :: (Status -> Source Twitter ByteString -> Twitter a)
     -> Twitter a
 getHomeTimeline k = getHomeTimeline' [] k
 
+-- | Get the user timeline using the REST API with request parameters
 getUserTimeline'
     :: [Param]
     -> (Status -> Source Twitter ByteString -> Twitter a)
@@ -155,11 +157,13 @@ getUserTimeline' params k = do
     request <- getRequest (urlRESTBase ++ "statuses/user_timeline.json") params
     makeRequest request $ \r -> k (responseStatus r) (responseBody r)
 
+-- | Get the user timeline using the REST API
 getUserTimeline
     :: (Status -> Source Twitter ByteString -> Twitter a)
     -> Twitter a
 getUserTimeline k = getUserTimeline' [] k
 
+-- | Stream raw 'ByteString' data from user stream with request parameters
 userStream'
     :: [Param]
     -> (Status -> Source Twitter ByteString -> Twitter a)
@@ -168,11 +172,13 @@ userStream' params k = do
     request <- getRequest "https://userstream.twitter.com/1.1/user.json" params
     makeRequest request $ \r -> k (responseStatus r) (responseBody r)
 
+-- | Stream raw 'ByteString' data from the user stream
 userStream
     :: (Status -> Source Twitter ByteString -> Twitter a)
     -> Twitter a
 userStream k = userStream' [] k
 
+-- | Stream raw 'ByteString' data from a public stream with given search terms
 publicStream
     :: [String] -- ^ Search terms
     -> (Status -> Source Twitter ByteString -> Twitter a)
@@ -183,6 +189,7 @@ publicStream terms k = do
                params
     makeRequest request $ \r -> k (responseStatus r) (responseBody r)
 
+-- | Publish a tweet using any desired request parameters
 tweet'
     :: String -- ^ Tweet
     -> [Param]
@@ -196,5 +203,6 @@ tweet' txt params = do
             show (statusCode $ responseStatus res)
         return $ responseStatus res
 
+-- | Publish a tweet
 tweet :: String -> Twitter Status
 tweet txt = tweet' txt []
