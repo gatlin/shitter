@@ -34,10 +34,10 @@ ripHarambe = do
     liftIO . putStrLn $ case statusCode status of
         200 -> "Shit: posted"
         _   -> "Another time, sweet prince"
+
 findHarambeTweets :: Twitter ()
-findHarambeTweets = do
-    publicStream ["harambe"] $ \status tweets ->
-        runTube $ sample tweets >< pour tweetSinkOfSomeKind
+findHarambeTweets = publicStream ["harambe"] $ \status tweets ->
+    runTube $ sample tweets >< pour tweetSinkOfSomeKind
 
 tweetSinkOfSomeKind :: Sink Twitter ByteString
 tweetSinkOfSomeKind = {- ... -}
