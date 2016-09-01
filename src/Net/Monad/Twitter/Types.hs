@@ -68,7 +68,7 @@ newtype Twitter a = Twitter (ReaderT TwitterStateRO IO a)
 -- | Evaluate a 'Client' computation with given 'Credentials'
 runTwitter :: Credentials -> Twitter a -> IO a
 runTwitter crd (Twitter c) = do
-    manager <- liftIO $ newManager tlsManagerSettings
+    manager <- newManager tlsManagerSettings
     runReaderT c $ TwitterStateRO crd manager
 
 -- | Retrieve the read-only 'Config' value in a 'Twitter' computation

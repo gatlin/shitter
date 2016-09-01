@@ -198,10 +198,7 @@ tweet' txt params = do
     let url = urlRESTBase ++ "statuses/update.json"
     let params' = (Param "status" (pack txt) : params)
     request <- postRequest url params'
-    makeRequest request $ \res -> do
-        liftIO . putStrLn $ "Status: " ++
-            show (statusCode $ responseStatus res)
-        return $ responseStatus res
+    makeRequest request $ return . responseStatus
 
 -- | Publish a tweet
 tweet :: String -> Twitter Status
