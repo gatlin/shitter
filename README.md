@@ -10,13 +10,16 @@ distributed with this source code. Like anyone gives a shit.
 ---
 
 This is an (in development) library for interacting with the Twitter
-API. It uses my [tubes][tubes] library for efficient stream handling and great
+API. The `Twitter` monad is defined which automatically keeps track of your API
+credentials, manages connections, and handles all the bullshit OAuth stuff.
+
+It uses my [tubes][tubes] library for efficient stream handling and great
 justice:
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 
-import Data.ByteString (ByteString, pack, unpack)
+import Data.ByteString (ByteString)
 import Net.Monad.Twitter
 import Tubes
 
