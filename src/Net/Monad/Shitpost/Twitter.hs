@@ -18,7 +18,6 @@ import qualified Prelude as P
 
 import Tubes
 
-import Net.OAuth.OAuth10a
 import Net.Monad.Shitpost.Types
 import Net.Monad.Shitpost.Core
 import Network.HTTP.Client

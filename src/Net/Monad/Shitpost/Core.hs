@@ -9,6 +9,10 @@ module Net.Monad.Shitpost.Core
     , authHeader
     , getRequest
     , postRequest
+    -- * Re-exports
+    , Param(..)
+    , Credentials(..)
+    , param_string
     )
 where
 
