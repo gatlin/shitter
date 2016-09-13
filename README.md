@@ -24,6 +24,7 @@ justice:
 
 import Data.ByteString (ByteString)
 import Net.Monad.Shitpost
+import Net.Monad.Shitpost.Twitter
 import Tubes
 
 creds :: Credentials
