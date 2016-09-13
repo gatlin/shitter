@@ -42,7 +42,7 @@ where
 import Prelude hiding (map, null, filter, break)
 import qualified Prelude as P
 
-import Net.Monad.Twitter.OAuth
+import Net.OAuth.OAuth10a
 import Net.Monad.Twitter.Types
 
 import Tubes
@@ -100,6 +100,15 @@ responseClose
     -> Twitter ()
 responseClose = liftIO . H.responseClose
 
+authHeader
+    :: ByteString -- ^ method
+    -> ByteString -- ^ url
+    -> [Param]    -- ^ Any extra parameters
+    -> Twitter ByteString
+authHeader method url extras = do
+    credentials <- getCredentials
+    auth_header credentials method url extras
+
 -- | Construct a GET request with the appropriate headers
 getRequest
     :: String -- ^ URL
@@ -109,7 +118,7 @@ getRequest url params = do
     -- convert the parameters into a query string
     let queryString = "?"++(unpack $ param_string params)
     initialRequest <- liftIO $ parseRequest $ "GET "++ url ++ queryString
-    ah <- auth_header "GET" (pack url) params
+    ah <- authHeader "GET" (pack url) params
     return $ initialRequest {
             requestHeaders =
                     [("Authorization", ah)
@@ -125,7 +134,7 @@ postRequest
     -> Twitter Request
 postRequest url params = do
     initialRequest <- liftIO $ parseRequest $ "POST " ++ url
-    ah <- auth_header "POST" (pack url) params
+    ah <- authHeader "POST" (pack url) params
     return $ urlEncodeParams params $ initialRequest {
         requestHeaders =
                 [("Authorization", ah)

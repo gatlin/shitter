@@ -16,7 +16,6 @@ Portability : non-portable
 module Net.Monad.Twitter.Types
     (
       Credentials(..)
-    , Param(..)
     , Twitter(..)
     , runTwitter
     , runTwitterWithManager
@@ -34,20 +33,7 @@ import Control.Monad.IO.Class
 import Network.HTTP.Client (Response(..), Manager(..), newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Tubes
-
--- | Bot credentials
-data Credentials = Credentials
-    { consumerKey :: ByteString
-    , consumerSecret :: ByteString
-    , token :: Maybe ByteString
-    , tokenSecret :: Maybe ByteString
-    } deriving (Show)
-
--- | HTTP request parameters
-data Param = Param
-    { paramKey   :: ByteString
-    , paramValue :: ByteString
-    } deriving (Show, Eq, Ord)
+import Net.OAuth.OAuth10a (Credentials(..))
 
 type ResponseStream = Response (Source Twitter ByteString)
 
