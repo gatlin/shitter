@@ -19,15 +19,6 @@ module Net.Monad.Shitpost
       Shitpost(..)
     , runShitpost
     , runShitpostWithManager
-    , tweet
-    , tweet'
-    , getHomeTimeline
-    , getHomeTimeline'
-    , getUserTimeline
-    , getUserTimeline'
-    , userStream
-    , userStream'
-    , publicStream
       -- * Miscellaneous
     , Credentials(..)
     , Param(..)
