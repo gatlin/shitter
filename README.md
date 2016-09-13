@@ -10,8 +10,11 @@ distributed with this source code. Like anyone gives a shit.
 ---
 
 This is an (in development) library for interacting with the Twitter
-API. The `Twitter` monad is defined which automatically keeps track of your API
+API. The `Shitpost` monad is defined which automatically keeps track of your API
 credentials, manages connections, and handles all the bullshit OAuth stuff.
+
+**Update**: I've actually decided to make this more generalized and include
+Tumblr as well!
 
 It uses my [tubes][tubes] library for efficient stream handling and great
 justice:
@@ -20,7 +23,7 @@ justice:
 {-# LANGUAGE OverloadedStrings #-}
 
 import Data.ByteString (ByteString)
-import Net.Monad.Twitter
+import Net.Monad.Shitpost
 import Tubes
 
 creds :: Credentials
@@ -31,18 +34,18 @@ creds = Credentials {
     tokenSecret = Just "access-token-secret"
 }
 
-ripHarambe :: Twitter ()
+ripHarambe :: Shitpost ()
 ripHarambe = do
     status <- tweet "#RipHarambe"
     liftIO . putStrLn $ case statusCode status of
         200 -> "Shit: posted"
         _   -> "Another time, sweet prince"
 
-findHarambeTweets :: Twitter ()
+findHarambeTweets :: Shitpost ()
 findHarambeTweets = publicStream ["harambe"] $ \status tweets ->
     runTube $ sample tweets >< pour tweetSinkOfSomeKind
 
-tweetSinkOfSomeKind :: Sink Twitter ByteString
+tweetSinkOfSomeKind :: Sink Shitpost ByteString
 tweetSinkOfSomeKind = {- ... -}
 ```
 

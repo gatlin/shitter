@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 {- |
-Module      : Net.Monad.Twitter.Types
+Module      : Net.Monad.Shitpost.Types
 Description : Common type definitions used elsewhere
 Copyright   : 2016
 License     : GPLv3
@@ -13,12 +13,12 @@ Portability : non-portable
 
 -}
 
-module Net.Monad.Twitter.Types
+module Net.Monad.Shitpost.Types
     (
       Credentials(..)
-    , Twitter(..)
-    , runTwitter
-    , runTwitterWithManager
+    , Shitpost(..)
+    , runShitpost
+    , runShitpostWithManager
     , ResponseStream
     , getManager
     , getCredentials
@@ -35,37 +35,37 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Tubes
 import Net.OAuth.OAuth10a (Credentials(..))
 
-type ResponseStream = Response (Source Twitter ByteString)
+type ResponseStream = Response (Source Shitpost ByteString)
 
 -- | Compound type containing read-only 'Twitter' state
-data TwitterStateRO = TwitterStateRO
+data ShitpostStateRO = ShitpostStateRO
     { credentials :: Credentials
     , manager     :: Manager
     }
 
 -- | A wrapper around 'IO' with access to read-only 'Credentials' and a
 -- connection 'Manager'
-newtype Twitter a = Twitter (ReaderT TwitterStateRO IO a)
+newtype Shitpost a = Shitpost (ReaderT ShitpostStateRO IO a)
     deriving ( Functor
              , Applicative
              , Monad
-             , MonadReader TwitterStateRO
+             , MonadReader ShitpostStateRO
              , MonadIO )
 
--- | Evaluate a 'Twitter' computation with given 'Credentials'
-runTwitter :: Credentials -> Twitter a -> IO a
-runTwitter crd twt = do
+-- | Evaluate a 'Shitpost' computation with 'Credentials'
+runShitpost :: Credentials -> Shitpost a -> IO a
+runShitpost crd twt = do
     manager <- newManager tlsManagerSettings
-    runTwitterWithManager manager crd twt
+    runShitpostWithManager manager crd twt
 
 -- | Similar to 'runTwitter' but with pre-existing connection 'Manager'
-runTwitterWithManager :: Manager -> Credentials -> Twitter a -> IO a
-runTwitterWithManager m crd (Twitter c) = runReaderT c $ TwitterStateRO crd m
+runShitpostWithManager :: Manager -> Credentials -> Shitpost a -> IO a
+runShitpostWithManager m crd (Shitpost c) = runReaderT c $ ShitpostStateRO crd m
 
 -- | Retrieve the read-only 'Config' value in a 'Twitter' computation
-getCredentials :: Twitter Credentials
+getCredentials :: Shitpost Credentials
 getCredentials = ask >>= return . credentials
 
 -- | Retrieves the connection manager
-getManager :: Twitter Manager
+getManager :: Shitpost Manager
 getManager = ask >>= return . manager
