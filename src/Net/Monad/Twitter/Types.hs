@@ -19,6 +19,7 @@ module Net.Monad.Twitter.Types
     , Param(..)
     , Twitter(..)
     , runTwitter
+    , runTwitterWithManager
     , ResponseStream
     , getManager
     , getCredentials
@@ -65,11 +66,15 @@ newtype Twitter a = Twitter (ReaderT TwitterStateRO IO a)
              , MonadReader TwitterStateRO
              , MonadIO )
 
--- | Evaluate a 'Client' computation with given 'Credentials'
+-- | Evaluate a 'Twitter' computation with given 'Credentials'
 runTwitter :: Credentials -> Twitter a -> IO a
-runTwitter crd (Twitter c) = do
+runTwitter crd twt = do
     manager <- newManager tlsManagerSettings
-    runReaderT c $ TwitterStateRO crd manager
+    runTwitterWithManager manager crd twt
+
+-- | Similar to 'runTwitter' but with pre-existing connection 'Manager'
+runTwitterWithManager :: Manager -> Credentials -> Twitter a -> IO a
+runTwitterWithManager m crd (Twitter c) = runReaderT c $ TwitterStateRO crd m
 
 -- | Retrieve the read-only 'Config' value in a 'Twitter' computation
 getCredentials :: Twitter Credentials

@@ -18,6 +18,7 @@ module Net.Monad.Twitter
     ( -- * Twitter monad
       Twitter(..)
     , runTwitter
+    , runTwitterWithManager
     , tweet
     , tweet'
     , getHomeTimeline
