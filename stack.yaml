@@ -39,7 +39,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/gatlin/oauth10a.git
-    commit: bd9b97080566aafcbb8e2ef4073897ed21468f50
+    commit: 8395e43d14434c3dd08655a01900a345dbd6367a
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: [tubes-2.1.1.0, comonad-5]
