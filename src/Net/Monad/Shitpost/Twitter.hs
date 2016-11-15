@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Net.Monad.Shitpost.Twitter
-    ( getHomeTimeline
+    ( search
+    , searchKeyword
+    , getHomeTimeline
     , getHomeTimeline'
     , getUserTimeline
     , getUserTimeline'
@@ -31,6 +33,22 @@ import Control.Monad.IO.Class
 
 twitterBase :: String
 twitterBase = "https://api.twitter.com/1.1/"
+
+-- | Non-streaming search. Must at least specify the "q" parameter
+search
+    :: [Param]
+    -> (Status -> Source Shitpost ByteString -> Shitpost a)
+    -> Shitpost a
+search params k = do
+    request <- getRequest (twitterBase ++ "search/tweets.json") params
+    makeRequest request $ \r -> k (responseStatus r) (responseBody r)
+
+-- | Simplified search. Specify a @String@ of comma-separated search terms.
+searchKeyword
+    :: String -- ^ Search term
+    -> (Status -> Source Shitpost ByteString -> Shitpost a)
+    -> Shitpost a
+searchKeyword q k = search' [Param "q" (pack q)] k
 
 -- | Get the home timeline using the REST API with request parameters
 getHomeTimeline'

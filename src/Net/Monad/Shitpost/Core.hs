@@ -112,3 +112,11 @@ postRequest url params = do
                 ,("Accept","*/*")
                 ,("User-Agent","shitpost")]
         }
+{-
+obtainAccessToken
+    :: String -- ^ Access token url
+    -> [Param] -- ^ Parameters
+    -> Shitpost Request
+obtainAccessToken url params = do
+    
+-}
