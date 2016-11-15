@@ -28,7 +28,7 @@ where
 import Data.ByteString (ByteString)
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.Reader
+import Control.Monad.State
 import Control.Monad.IO.Class
 import Network.HTTP.Client (Response(..), Manager(..), newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -38,18 +38,18 @@ import Net.OAuth.OAuth10a (Credentials(..))
 type ResponseStream = Response (Source Shitpost ByteString)
 
 -- | Compound type containing read-only 'Twitter' state
-data ShitpostStateRO = ShitpostStateRO
+data ShitpostState = ShitpostState
     { credentials :: Credentials
     , manager     :: Manager
     }
 
--- | A wrapper around 'IO' with access to read-only 'Credentials' and a
+-- | A wrapper around 'IO' with mutable access to the 'Credentials' and a
 -- connection 'Manager'
-newtype Shitpost a = Shitpost (ReaderT ShitpostStateRO IO a)
+newtype Shitpost a = Shitpost (StateT ShitpostState IO a)
     deriving ( Functor
              , Applicative
              , Monad
-             , MonadReader ShitpostStateRO
+             , MonadState ShitpostState
              , MonadIO )
 
 -- | Evaluate a 'Shitpost' computation with 'Credentials'
@@ -60,12 +60,16 @@ runShitpost crd twt = do
 
 -- | Similar to 'runTwitter' but with pre-existing connection 'Manager'
 runShitpostWithManager :: Manager -> Credentials -> Shitpost a -> IO a
-runShitpostWithManager m crd (Shitpost c) = runReaderT c $ ShitpostStateRO crd m
+runShitpostWithManager m crd (Shitpost c) = evalStateT c $ ShitpostState crd m
 
--- | Retrieve the read-only 'Config' value in a 'Twitter' computation
+-- | Retrieve the 'Config' value in a 'Shitpost' computation
 getCredentials :: Shitpost Credentials
-getCredentials = ask >>= return . credentials
+getCredentials = get >>= return . credentials
+
+-- | Set the 'Config' value in a 'Shitpost' computation
+setCredentials :: Credentials -> Shitpost ()
+setCredentials crds = modify $ \st -> st { credentials = crds }
 
 -- | Retrieves the connection manager
 getManager :: Shitpost Manager
-getManager = ask >>= return . manager
+getManager = get >>= return . manager
