@@ -37,7 +37,7 @@ import Net.OAuth.OAuth10a (Credentials(..))
 
 type ResponseStream = Response (Source Shitpost ByteString)
 
--- | Compound type containing read-only 'Twitter' state
+-- | Compound type containing 'Twitter' state
 data ShitpostState = ShitpostState
     { credentials :: Credentials
     , manager     :: Manager
