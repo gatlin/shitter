@@ -43,7 +43,7 @@ ripHarambe = do
         _   -> "Another time, sweet prince"
 
 findHarambeTweets :: Shitpost ()
-findHarambeTweets = publicStream ["harambe"] $ \status tweets ->
+findHarambeTweets = searchKeyword "harambe" $ \status tweets ->
     runTube $ sample tweets >< pour tweetSinkOfSomeKind
 
 tweetSinkOfSomeKind :: Sink Shitpost ByteString
