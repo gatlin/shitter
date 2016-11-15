@@ -21,26 +21,11 @@ findGatlinTweets = searchKeyword "gatlin" $ \status tweets -> do
     liftIO . putStrLn . show $ statusCode status
     runTube $ sample tweets >< map show >< pour display
 
-twitterTest :: IO ()
-twitterTest = do
-    args <- getArgs
-    let creds = Credentials {
-            consumerKey = pack (args !! 0),
-            consumerSecret = pack (args !! 1),
-            token = Just (pack (args !! 2)),
-            tokenSecret = Just (pack (args !! 3))
-            }
-    runShitpost creds findGatlinTweets
+twitterTest :: Credentials -> IO ()
+twitterTest creds = runShitpost creds findGatlinTweets
 
-tumblrTest :: IO ()
-tumblrTest = do
-    args <- getArgs
-    let creds = Credentials {
-            consumerKey = pack (args !! 0),
-            consumerSecret = pack (args !! 1),
-            token = Nothing,
-            tokenSecret = Nothing
-            }
+tumblrTest :: Credentials -> IO ()
+tumblrTest creds =
     runShitpost creds $ do
         pr <- postRequest "https://www.tumblr.com/oauth/request_token" []
         makeRequest pr $ \r -> do
@@ -50,4 +35,22 @@ tumblrTest = do
                    >< pour display
 
 main :: IO ()
-main = tumblrTest
+main = do
+    args <- getArgs
+    case (args !! 0) of
+        "twitter" -> do
+            twitterTest $ Credentials {
+                consumerKey = pack (args !! 1),
+                consumerSecret = pack (args !! 2),
+                token = Just (pack (args !! 3)),
+                tokenSecret = Just (pack (args !! 4))
+                }
+        "tumblr" -> do
+            tumblrTest $ Credentials {
+                consumerKey = pack (args !! 1),
+                consumerSecret = pack (args !! 2),
+                token = Nothing,
+                tokenSecret = Nothing
+                }
+        _ -> do
+            putStrLn "Error: invalid test arguments"
