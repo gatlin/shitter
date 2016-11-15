@@ -48,7 +48,7 @@ searchKeyword
     :: String -- ^ Search term
     -> (Status -> Source Shitpost ByteString -> Shitpost a)
     -> Shitpost a
-searchKeyword q k = search' [Param "q" (pack q)] k
+searchKeyword q k = search [Param "q" (pack q)] k
 
 -- | Get the home timeline using the REST API with request parameters
 getHomeTimeline'
