@@ -27,6 +27,3 @@ findGatlinTweets = searchKeyword "gatlin" $ \status tweets -> do
 
 main :: IO ()
 main = runShitpost creds findGatlinTweets
-
-twitterUrl :: String
-twitterUrl = "https://api.twitter.com/1.1/search/tweets.json"
