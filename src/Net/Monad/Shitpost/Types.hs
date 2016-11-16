@@ -22,6 +22,7 @@ module Net.Monad.Shitpost.Types
     , ResponseStream
     , getManager
     , getCredentials
+    , setCredentials
     )
 where
 
