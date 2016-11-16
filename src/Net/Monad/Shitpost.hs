@@ -19,6 +19,9 @@ module Net.Monad.Shitpost
       Shitpost(..)
     , runShitpost
     , runShitpostWithManager
+    , getCredentials
+    , setCredentials
+    , getManager
       -- * Miscellaneous
     , Credentials(..)
     , Param(..)
